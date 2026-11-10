@@ -11,8 +11,8 @@ fees.
 <img src="demo/media/demo-poster.jpg" width="320" alt="A frame from the public-domain demo episode">
 
 ```powershell
-dub.py run   "S01E01.mkv"  --lang es            # a finished cut
-dub.py batch "lines.csv"   --voices cast/       # or a script, no video needed
+dub.py run   "S01E01.mkv"  --lang es          # a finished cut
+dub.py batch "lines.csv"   --voices cast/     # a script, no video needed
 ```
 
 Point it at `S01E01.mkv`, name a language, get `S01E01.es.mp4` with the English audio
