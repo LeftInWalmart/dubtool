@@ -1,3 +1,10 @@
-# optional: best-in-class speaker diarization (needs a free HF_TOKEN and
-# accepting the model terms at https://huggingface.co/pyannote/speaker-diarization-3.1)
+# Optional extras - `install.ps1` adds all of these.
+#
+# piper: MIT, no cloning, but ~1.6x real time on one core. Live mode needs it, and it is
+# also the fast option for a rough draft of a whole episode. 24 languages, .cache/piper/.
+piper-tts>=1.2
+# yt-dlp: only used by `dub.py live <url>` to fetch a video you don't have on disk yet.
+yt-dlp>=2024.1
+# Best-in-class speaker diarization (needs a free HF_TOKEN and accepting the model terms at
+# https://huggingface.co/pyannote/speaker-diarization-3.1)
 pyannote.audio>=3.3.2

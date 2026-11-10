@@ -15,7 +15,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from dubkit import ff, speech, voice  # noqa: E402
+from dubkit import ff, live, speech, voice  # noqa: E402
 from dubkit.pipeline import Work, _sig_file  # noqa: E402
 
 
@@ -234,6 +234,66 @@ def test_batch_voices():
         assert batch.find_voice(cast, "Narrator").name == "default.wav"
         (cast / "default.wav").unlink()
         assert batch.find_voice(cast, "Nobody") is None
+
+
+def test_piper_voice_allocation():
+    """Every advertised language needs a voice, and two characters must not share one."""
+    assert "es" in voice.PIPER_LANGS and "cs" in voice.PIPER_LANGS  # cs is piper-only
+    assert voice.PIPER_LANGS.isdisjoint({"uk"})                     # not a language we claim
+    for lang, names in voice.PIPER_VOICES.items():
+        assert names, lang
+        assert all("-" in n and n.count("_") >= 1 for n in names), (lang, names)
+    engine = voice.PiperEngine()
+    a, b = engine._voice_for("spk01", "es"), engine._voice_for("spk02", "es")
+    assert a != b, "two characters got the same stock voice"
+    assert engine._voice_for("spk01", "es") == a, "voice allocation is not stable"
+    # a language with a single voice still has to work
+    assert engine._voice_for("spk02", "tr") == engine._voice_for("spk09", "tr")
+    try:
+        engine._voice_for("spk01", "xx")
+    except SystemExit as exc:
+        assert "piper cannot speak" in str(exc)
+    else:
+        raise AssertionError("unknown language should stop the run with a readable message")
+
+
+def test_live_blocks_and_routes():
+    """The page is served before any model loads, so this needs no weights at all."""
+    import threading
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+
+    cfg = live.LiveConfig(inp="whatever.mkv", lang="es", port=0, buffer=15.0)
+    state = live.Live(cfg)
+    state.set(phase="dubbing", total=100.0, ready=20.0, blocks=4, lines_done=3, lines_total=25)
+    snap = state.snapshot()
+    assert snap["lang"] == "es" and snap["blocks"] == 4
+    assert snap["block_seconds"] == live.BLK == 5.0
+    assert snap["buffer"] == 15.0 and snap["engine"] == "piper"
+
+    live.Handler.live = state
+    server = ThreadingHTTPServer(("127.0.0.1", 0), live.Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        with urllib.request.urlopen(f"{base}/state.json", timeout=5) as r:
+            got = json.loads(r.read())
+        assert got["ready"] == 20.0 and got["phase"] == "dubbing"
+
+        with urllib.request.urlopen(f"{base}/", timeout=5) as r:
+            page = r.read().decode()
+        assert "DubTool live" in page and "/state.json" in page and "AudioContext" in page
+
+        # a block that does not exist yet must be a clean 404, not a crash
+        try:
+            urllib.request.urlopen(f"{base}/audio/999.wav", timeout=5)
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 404
+        else:
+            raise AssertionError("missing block should 404")
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def main():

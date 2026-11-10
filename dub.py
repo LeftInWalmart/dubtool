@@ -75,7 +75,8 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("-o", "--out-dir", help="output folder (default: next to the CSV)")
     b.add_argument("--voices", help="folder of <character>.wav reference clips")
     b.add_argument("--voice", help="one reference clip for every character")
-    b.add_argument("--tts", default="auto", choices=["auto", "chatterbox", "xtts", "elevenlabs"])
+    b.add_argument("--tts", default="auto",
+                   choices=["auto", "chatterbox", "piper", "xtts", "elevenlabs"])
     b.add_argument("--tts-model", default=None, help="elevenlabs model")
     b.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     b.add_argument("--translate", default="auto", choices=["auto", "openrouter", "google", "none"])
@@ -84,6 +85,27 @@ def build_parser() -> argparse.ArgumentParser:
                    help="parallel voice workers (0 = one per two cores; default 1)")
     b.add_argument("--no-loudnorm", action="store_true")
     b.add_argument("--force", action="store_true")
+
+    lv = sub.add_parser(
+        "live",
+        help="dub while someone watches: buffers, translates ahead of the playhead, then plays",
+    )
+    lv.add_argument("source", help="video file, or a URL if yt-dlp is installed")
+    lv.add_argument("--lang", required=True, help="target language, e.g. es fr de ja th")
+    lv.add_argument("--port", type=int, default=8080)
+    lv.add_argument("--buffer", type=float, default=20.0,
+                    help="seconds of dub to produce before the viewer may start (default 20)")
+    lv.add_argument("--whisper", default="small", help="tiny base small medium large-v3")
+    lv.add_argument("--tts", default="piper", choices=["piper", "chatterbox", "xtts", "elevenlabs"],
+                    help="piper is the default: it is the only engine faster than playback")
+    lv.add_argument("--tts-model", default=None)
+    lv.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
+    lv.add_argument("--translate", default="auto", choices=["auto", "openrouter", "google", "none"])
+    lv.add_argument("--translate-model", default="google/gemini-2.5-flash")
+    lv.add_argument("--separate", default="demucs", choices=["demucs", "none"])
+    lv.add_argument("--jobs", type=int, default=1)
+    lv.add_argument("--no-browser", action="store_true", help="don't open a tab")
+    lv.add_argument("--work", help="scratch folder (default: dubwork/live-<name>)")
     return p
 
 
@@ -201,6 +223,13 @@ def doctor(device="auto"):
     except SystemExit:
         line(False, "chatterbox", "not installed - run scripts\\setup_chatterbox.ps1 (MIT engine, needed to sell dubs)")
     try:
+        from piper.download_voices import list_voices  # noqa: F401
+        import piper
+
+        line(True, "piper", "installed (MIT, ~1.6x real time, needed for live mode)")
+    except Exception:
+        line(False, "piper", "not installed - .venv\Scripts\python.exe -m pip install piper-tts")
+    try:
         import torch
 
         cuda = torch.cuda.is_available()
@@ -228,6 +257,16 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.cmd == "doctor":
         return doctor(args.device)
+    if args.cmd == "live":
+        from dubkit import live
+        live.serve(live.LiveConfig(
+            inp=args.source, lang=args.lang, port=args.port, buffer=args.buffer,
+            whisper=args.whisper, tts=args.tts, tts_model=args.tts_model,
+            device=args.device, translate=args.translate,
+            translate_model=args.translate_model, separate=args.separate,
+            jobs=resolve_jobs(args.jobs), open_browser=not args.no_browser,
+            work=Path(args.work) if args.work else None))
+        return 0
     if args.cmd == "batch":
         from dubkit import batch
         batch.run(batch.Config(

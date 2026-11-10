@@ -4,6 +4,19 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-ff9d5c.svg)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11-3776ab.svg)](https://www.python.org/downloads/release/python-3110/)
 
+[![Download the latest version](https://img.shields.io/badge/%E2%AC%87%20download-latest%20version-ff9d5c?style=for-the-badge)](https://github.com/LeftInWalmart/dubtool/releases/latest)
+
+**[Download the latest version](https://github.com/LeftInWalmart/dubtool/releases/latest)** —
+unzip, then one command in that folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+That installs everything (about 10 GB, mostly model weights), checks the machine, and prints
+the three commands you can run. `-Cuda` if you have an NVIDIA card, `-NoVoices` to skip the
+2 GB cloning engine.
+
 Localize a video — or just a script — into another language **using each character's own
 voice**. Free, MIT licensed, runs on your machine: no uploads, no accounts, no per-minute
 fees.
@@ -11,8 +24,9 @@ fees.
 <img src="demo/media/demo-poster.jpg" width="320" alt="A frame from the public-domain demo episode">
 
 ```powershell
-dub.py run   "S01E01.mkv"  --lang es          # a finished cut
-dub.py batch "lines.csv"   --voices cast/     # a script, no video needed
+dub.bat run   "S01E01.mkv"  --lang es          # a finished cut
+dub.bat batch "lines.csv"   --voices cast/     # a script, no video needed
+dub.bat live  "S01E01.mkv"  --lang es          # watch it while it dubs
 ```
 
 Point it at `S01E01.mkv`, name a language, get `S01E01.es.mp4` with the English audio
@@ -38,15 +52,44 @@ episode.mkv
    └─ 8  mix over bed, mux with the video ──────── S01E01.es.mp4
 ```
 
+## Watch it while it dubs
+
+```powershell
+dub.bat live "S01E01.mkv" --lang es            # or a URL, if yt-dlp is installed
+dub.bat live "S01E01.mkv" --lang es --buffer 40   # wait for more before starting
+```
+
+It opens a browser at `http://localhost:8080`. The page shows the film, one viewer, and:
+
+1. **buffers** — the audio track, the transcript, who says what, and the translation are
+   prepared first; the page reports each phase while it waits, so nothing looks frozen
+2. **dubs ahead** — lines are voiced in time order and mixed onto the music/effects bed in
+   5-second blocks, always trying to stay ~20 s in front of the playhead
+3. **plays** — the picture runs muted and the dubbed audio is scheduled on the WebAudio clock
+   against it; the video's `currentTime` is slaved to the audio, so they cannot drift apart
+4. **stalls honestly** — if the engine falls behind (slow machine, `--tts chatterbox`, a GPU
+   that is busy), playback pauses on a "buffering the dub" card and resumes at the next block
+   boundary. It never plays sound that does not belong to the frame you are looking at.
+
+Live mode wants `--tts piper`. With a cloning engine the dub is 8–15× slower than playback,
+so the viewer would sit through a stall every few seconds; the page will tell them why.
+
 ## Engines and licences
 
 This matters if you plan to sell what comes out.
 
-| `--tts` | weights | languages | speed (CPU) | sell the dubs? |
-|---|---|---|---|---|
-| `chatterbox` (default) | **MIT** | 23 | ~45–60 s per line | **yes** |
-| `xtts` | Coqui Public Model License | 17 | ~14 s per line | no — non-commercial |
-| `elevenlabs` | hosted, paid | 29+ | seconds | yes, but you rent it per minute |
+| `--tts` | weights | languages | speed (CPU) | clones the actor? | sell the dubs? |
+|---|---|---|---|---|---|
+| `chatterbox` (default) | **MIT** | 23 | ~45–60 s per line | yes | **yes** |
+| `piper` | **MIT** | 24 | **~0.6× real time** | no — a stock voice per character | **yes** |
+| `xtts` | Coqui Public Model License | 17 | ~14 s per line | yes | no — non-commercial |
+| `elevenlabs` | hosted, paid | 29+ | seconds | yes | yes, but you rent it per minute |
+
+Piper is the fast one and the reason live mode exists: at roughly 1.6× real time it produces
+audio quicker than a viewer watches it, so a stream can stay ahead of the playhead. It does
+not copy anybody's voice — each character gets a different stock voice, which for animation
+and games is often all you want, and it covers `cs`, `hu`, `fi`, `da` and `no`, which
+Chatterbox cannot speak.
 
 Coqui XTTS-v2 is the better-known voice clone and it is faster, but its licence says
 *"only non-commercial use of a machine learning model and its outputs"*, and Coqui no longer

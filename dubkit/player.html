@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DubTool live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --ink:#08080a; --cream:#f4efe7; --muted:#9a938b; --accent:#ff9d5c; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--ink); color:var(--cream);
+         font:16px/1.5 -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+  header { display:flex; gap:16px; align-items:baseline; padding:18px 24px;
+           border-bottom:1px solid #ffffff14; }
+  header b { font-weight:600; }
+  header .lang { color:var(--accent); font-variant:all-small-caps; letter-spacing:.08em; }
+  header .meta { margin-left:auto; color:var(--muted); font-size:13px;
+                 font-family:ui-monospace, Consolas, monospace; }
+  main { max-width:1120px; margin:0 auto; padding:24px; }
+  .stage { position:relative; background:#000; border-radius:12px; overflow:hidden;
+           aspect-ratio:16/9; }
+  video { width:100%; height:100%; display:block; }
+  .veil { position:absolute; inset:0; display:grid; place-items:center; gap:14px;
+          background:linear-gradient(#08080ad0, #08080af2); text-align:center; padding:24px; }
+  .veil[hidden] { display:none; }
+  .veil h2 { margin:0; font-size:19px; font-weight:600; }
+  .veil p { margin:0; color:var(--muted); max-width:46ch; }
+  .bar { width:min(420px, 70%); height:4px; border-radius:99px; background:#ffffff1f;
+         overflow:hidden; }
+  .bar i { display:block; height:100%; width:0; background:var(--accent);
+           transition:width .4s ease; }
+  .veil .num { font-family:ui-monospace, Consolas, monospace; font-size:13px; color:var(--accent); }
+  footer { display:flex; flex-wrap:wrap; gap:18px; padding:14px 2px 0; color:var(--muted);
+           font-size:13px; font-family:ui-monospace, Consolas, monospace; }
+  footer b { color:var(--cream); font-weight:500; }
+  .dot { display:inline-block; width:7px; height:7px; border-radius:99px; background:#4b8b3b;
+         margin-right:6px; vertical-align:middle; }
+  .dot.wait { background:var(--accent); animation:pulse 1.1s infinite; }
+  @keyframes pulse { 50% { opacity:.35; } }
+</style>
+</head>
+<body>
+<header>
+  <b id="title">DubTool live</b>
+  <span class="lang" id="lang"></span>
+  <span class="meta" id="meta"></span>
+</header>
+
+<main>
+  <div class="stage">
+    <video id="v" playsinline muted controls preload="auto" src="/video"></video>
+    <div class="veil" id="veil">
+      <h2 id="veilTitle">Starting…</h2>
+      <p id="veilText">Reading the file.</p>
+      <div class="bar"><i id="veilBar"></i></div>
+      <span class="num" id="veilNum"></span>
+    </div>
+  </div>
+  <footer>
+    <span><span class="dot wait" id="dot"></span><b id="phase">starting</b></span>
+    <span>dubbed <b id="ready">0:00</b> / <b id="total">0:00</b></span>
+    <span>blocks <b id="blocks">0</b></span>
+    <span>lines <b id="lines">0</b></span>
+    <span>speed <b id="rate">—</b></span>
+  </footer>
+</main>
+
+<script>
+const BLK = 5;                 // must match live.py
+const LEAD = 0.12;             // headroom before the first scheduled block
+const AHEAD = 1.2;             // how far past the playhead must already be scheduled
+const $ = id => document.getElementById(id);
+const mmss = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+let ctx = null, buffers = new Map(), sources = [], epoch = 0, mediaEpoch = 0;
+let scheduledUntil = 0, running = false, starting = false, stalled = false;
+let lastState = {}, started = false, userSeeking = false, attempts = 0, pausedByBrowser = false;
+
+const video = $('v');
+
+async function getState() {
+  try { return await fetch('/state.json', {cache:'no-store'}).then(r => r.json()); }
+  catch { return null; }
+}
+
+async function loadBlock(k) {
+  if (buffers.has(k)) return buffers.get(k);
+  let res;
+  try { res = await fetch(`/audio/${k}.wav`, {cache:'no-store'}); } catch { return null; }
+  if (!res.ok) return null;
+  try {
+    const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+    buffers.set(k, buf);
+    while (buffers.size > 40) buffers.delete(Math.min(...buffers.keys()));
+    return buf;
+  } catch { return null; }
+}
+
+function stopAudio() {
+  for (const s of sources) { try { s.stop(); } catch {} }
+  sources = [];
+  scheduledUntil = 0;
+}
+
+// Play from the beginning of block k, on a fresh clock. Block boundaries only: a viewer who
+// pauses or seeks mid-block starts at the next one instead of hearing half a sentence.
+async function rebase(k) {
+  stopAudio();
+  running = false;
+  mediaEpoch = k * BLK;
+  epoch = ctx.currentTime + LEAD;
+  try { video.currentTime = mediaEpoch; } catch {}
+  for (let i = k; i <= k + 2; i++) {
+    const b = await loadBlock(i);
+    if (!b) break;
+    const src = ctx.createBufferSource();
+    src.buffer = b;
+    src.connect(ctx.destination);
+    src.start(Math.max(epoch + (i * BLK - mediaEpoch), ctx.currentTime));
+    sources.push(src);
+    scheduledUntil = i * BLK + b.duration;
+  }
+  if (scheduledUntil > mediaEpoch) {
+    running = true; stalled = false; started = true;
+    $('veil').hidden = true;
+    $('dot').classList.remove('wait');
+    if (video.paused) {
+      video.play().catch(() => {
+        attempts += 1;
+        stalled = true;
+        if (attempts > 3) pausedByBrowser = true;
+        veil();
+      });
+    }
+  } else {
+    stalled = true;
+  }
+}
+
+async function maybeStart() {
+  if (running || starting || !lastState || !ctx || pausedByBrowser) return;
+  if (ctx.state !== 'running') { armGesture(); return; }   // no clock, no sync
+  const st = lastState;
+  const need = Math.min(st.buffer || 20, Math.max(4, (st.total || 0) * 0.5));
+  if (st.phase === 'done' || st.ready >= need) {
+    starting = true;
+    try { await rebase(Math.max(0, Math.floor(video.currentTime / BLK))); }
+    finally { starting = false; }
+  }
+}
+
+// Chrome will not let a page make sound until the viewer has touched it, so the page says so
+// instead of sitting there looking broken.
+function armGesture() {
+  const go = async () => {
+    document.removeEventListener('click', go);
+    document.removeEventListener('keydown', go);
+    document.removeEventListener('touchstart', go);
+    try { await ctx.resume(); } catch {}
+    if (!running) { stalled = false; maybeStart(); }
+    paint(await getState());
+  };
+  if (ctx.state !== 'running') {
+    document.addEventListener('click', go);
+    document.addEventListener('keydown', go);
+    document.addEventListener('touchstart', go);
+  }
+}
+
+function veil() {
+  const st = lastState;
+  const need = Math.min(st.buffer || 20, Math.max(4, (st.total || 0) * 0.5));
+  const lang = (st.lang || '').toUpperCase();
+  let title = `Dubbing ${lang}`, text = 'Preparing.', pct = 0;
+  const ready = st.ready || 0;
+
+  if (ctx && ctx.state === 'suspended' && !running) {
+    title = `Dubbing ${lang}`;
+    text = 'Click anywhere to start — browsers need one tap before they play sound.';
+    pct = st.total ? (ready / st.total) * 100 : 0;
+  } else if (st.phase === 'error') {
+    title = 'Something broke';
+    text = st.error || 'Unknown error';
+  } else if (pausedByBrowser) {
+    title = `Dubbing ${lang}`;
+    text = 'Your browser paused the picture — press play on the video to carry on.';
+    pct = st.total ? (ready / st.total) * 100 : 0;
+  } else if (stalled) {
+    title = 'Buffering the dub';
+    text = `Waiting for the next ${BLK}s of ${lang}.`;
+    pct = st.total ? (ready / st.total) * 100 : 0;
+  } else if (st.phase === 'remux') {
+    text = 'Reading the picture.';
+  } else if (st.phase === 'audio') {
+    text = 'Pulling the audio out of the file.';
+  } else if (st.phase === 'transcribing') {
+    text = 'Finding the lines and who says them.';
+    pct = st.total ? (ready / st.total) * 100 : 0;
+  } else if ((st.phase || '').startsWith('translating')) {
+    text = 'Translating the script, line by line.';
+  } else if (st.phase === 'dubbing') {
+    text = `Writing the dub — it starts at ${Math.round(need)}s so it can stay ahead of you.`;
+    pct = (ready / need) * 100;
+  } else if (st.phase === 'done') {
+    text = 'Starting.';
+    pct = 100;
+  }
+  $('veil').hidden = false;
+  $('veilTitle').textContent = title;
+  $('veilText').textContent = text;
+  $('veilBar').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  $('veilNum').textContent = st.phase === 'error' ? ''
+    : `${Math.round(ready)}s of ${Math.round(st.total || 0)}s dubbed · ${st.lines_done || 0}/${st.lines_total || 0} lines`;
+  if (!running) $('dot').classList.add('wait');
+}
+
+function paint(s) {
+  if (!s) return;
+  lastState = s;
+  $('title').textContent = s.title || 'DubTool live';
+  $('lang').textContent = (s.lang || '').toUpperCase();
+  $('meta').textContent = `${s.engine} · block ${s.block_seconds}s`;
+  $('phase').textContent = s.phase;
+  $('ready').textContent = mmss(s.ready || 0);
+  $('total').textContent = mmss(s.total || 0);
+  $('blocks').textContent = s.blocks || 0;
+  $('lines').textContent = `${s.lines_done || 0}/${s.lines_total || 0}`;
+  $('rate').textContent = s.rate ? `${s.rate.toFixed(1)}× real time` : '—';
+
+  if (s.phase === 'error') { veil(); return; }
+  if (running) { $('veil').hidden = true; return; }
+
+  veil();
+  maybeStart();
+}
+
+function sync() {
+  if (!running || !ctx || ctx.state !== 'running') return;
+  const pos = mediaEpoch + (ctx.currentTime - epoch);
+  if (!video.seeking && Math.abs(video.currentTime - pos) > 0.12) video.currentTime = pos;
+
+  if (pos + AHEAD > scheduledUntil) {
+    const k = Math.max(Math.floor(pos / BLK), Math.floor(scheduledUntil / BLK));
+    loadBlock(k).then(b => {
+      if (!b || !running) return;
+      const when = epoch + (k * BLK - mediaEpoch);
+      if (when < ctx.currentTime - 0.05) { stalled = true; return; }   // arrived too late
+      const src = ctx.createBufferSource();
+      src.buffer = b; src.connect(ctx.destination);
+      src.start(when); sources.push(src);
+      scheduledUntil = Math.max(scheduledUntil, k * BLK + b.duration);
+    });
+    if (pos + 0.3 > scheduledUntil) stalled = true;
+  }
+  if (stalled) {                       // never play sound that is not queued
+    stopAudio(); running = false; video.pause();
+    veil();
+  }
+}
+
+video.addEventListener('seeking', () => { userSeeking = true; });
+video.addEventListener('seeked', () => {
+  userSeeking = false; stopAudio(); running = false; stalled = true;
+  rebase(Math.max(0, Math.floor(video.currentTime / BLK)));
+});
+video.addEventListener('pause', () => { if (!video.seeking) { stopAudio(); running = false; } });
+video.addEventListener('play', () => {
+  pausedByBrowser = false; attempts = 0;
+  if (!running && started) rebase(Math.max(0, Math.floor(video.currentTime / BLK)));
+});
+video.addEventListener('click', async () => {
+  try { await ctx.resume(); } catch {}
+  video.paused ? video.play().catch(() => {}) : video.pause();
+});
+
+(async function boot() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
+  armGesture();
+  paint(await getState());
+  setInterval(async () => paint(await getState()), 800);
+  setInterval(sync, 200);
+})();
+</script>
+</body>
+</html>

@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from . import ff
+from . import CACHE, ff
 
 # ------------------------------------------------------------------ languages
 XTTS_LANGS = {
@@ -32,8 +32,39 @@ CHATTERBOX_LANGS = {
     "ko", "ms", "nl", "no", "pl", "pt", "ru", "sv", "sw", "tr", "zh",
 }
 
+# Piper (MIT, onnxruntime): no voice cloning, but ~1.6x real time on one CPU core, which is the
+# only engine here fast enough to dub a stream while somebody watches it. Voices are fixed, so a
+# speaker gets their own voice rather than their own voice *copied* - see live.py.
+PIPER_VOICES = {
+    "es": ["es_MX-claude-high", "es_ES-davefx-medium", "es_AR-daniela-high"],
+    "en": ["en_US-lessac-high", "en_GB-cori-high", "en_US-ryan-high"],
+    "de": ["de_DE-thorsten-high", "de_DE-kerstin-medium", "de_DE-thorsten_emotional-medium"],
+    "fr": ["fr_FR-siwis-medium", "fr_FR-tom-medium", "fr_FR-upmc-medium"],
+    "it": ["it_IT-serena-high", "it_IT-paola-medium"],
+    "pt": ["pt_BR-cadu-medium", "pt_BR-faber-medium", "pt_BR-jeff-medium"],
+    "ru": ["ru_RU-irina-medium", "ru_RU-denis-medium", "ru_RU-dmitri-medium"],
+    "zh": ["zh_CN-huayan-medium", "zh_CN-chaowen-medium"],
+    "ar": ["ar_JO-kareem-medium"],
+    "hi": ["hi_IN-priyamvada-medium", "hi_IN-pratham-medium", "hi_IN-rohan-medium"],
+    "ja": ["ja_JP-hi_fi_captain-medium"],
+    "ko": ["ko_KR-kss-medium"],
+    "nl": ["nl_NL-alex-medium", "nl_BE-nathalie-medium", "nl_NL-mls-medium"],
+    "pl": ["pl_PL-gosia-medium", "pl_PL-darkman-medium", "pl_PL-bass-high"],
+    "sv": ["sv_SE-alma-medium", "sv_SE-lisa-medium", "sv_SE-nst-medium"],
+    "tr": ["tr_TR-dfki-medium"],
+    "da": ["da_DK-talesyntese-medium"],
+    "no": ["no_NO-talesyntese-medium", "no_NO-nvcc-medium"],
+    "fi": ["fi_FI-harri-medium"],
+    "el": ["el_GR-joy-medium", "el_GR-rapunzelina-medium"],
+    "he": ["he_IL-saspeech-medium"],
+    "sw": ["sw_CD-lanfrica-medium"],
+    "cs": ["cs_CZ-jirka-medium", "cs_CZ-kasandra-medium"],
+    "hu": ["hu_HU-imre-medium", "hu_HU-anna-medium", "hu_HU-berta-medium"],
+}
+PIPER_LANGS = set(PIPER_VOICES)
+
 # Spoken by at least one engine, so the CLI can say "pick a voice" rather than "unknown".
-ALL_LANGS = XTTS_LANGS | CHATTERBOX_LANGS
+ALL_LANGS = XTTS_LANGS | CHATTERBOX_LANGS | PIPER_LANGS
 
 ELEVEN_LANGS = {
     "en", "ja", "zh", "de", "hi", "fr", "ko", "pt", "it", "es", "id", "nl",
@@ -266,6 +297,94 @@ class XttsEngine:
 
     def close(self):
         pass
+
+
+class PiperEngine:
+    """Piper: MIT, onnxruntime, ~1.6x real time on one core, 24 languages, no cloning.
+
+    Each speaker gets a different stock voice, so a scene still sounds like a scene. That is a
+    weaker promise than Chatterbox's copy of the actor, and the reason this engine exists is
+    speed: it is the only one that can dub faster than the viewer watches.
+    """
+
+    name = "piper"
+    noncommercial = False
+    parallel = False  # already faster than real time; lapping it buys nothing worth the RAM
+
+    def __init__(self, device: str = "cpu", model: str | None = None):
+        if model:  # --tts-model pins one voice for every speaker
+            self.pin = model
+        else:
+            self.pin = None
+        self.dir = CACHE / "piper"
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self._loaded: dict[str, object] = {}
+        self._voice_of: dict[str, str] = {}
+
+    # -- voice resolution ---------------------------------------------------
+    def _available(self, lang: str) -> list[str]:
+        if self.pin:
+            return [self.pin]
+        voices = PIPER_VOICES.get(lang)
+        if not voices:
+            raise SystemExit(
+                f"piper cannot speak '{lang}'. It has: {', '.join(sorted(PIPER_LANGS))}.\n"
+                "Use --tts chatterbox for voice cloning, or --tts elevenlabs for anything else."
+            )
+        return voices
+
+    def _ensure(self, voice: str) -> None:
+        """Download once, into the project cache rather than the current directory."""
+        onnx = self.dir / f"{voice}.onnx"
+        if onnx.exists():
+            return
+        from piper.download_voices import download_voice
+
+        print(f"      downloading piper voice {voice} (~60 MB)")
+        download_voice(voice, self.dir)
+
+    def _load(self, voice: str):
+        if voice in self._loaded:
+            return self._loaded[voice]
+        from piper import PiperVoice
+
+        self._ensure(voice)
+        loaded = PiperVoice.load(self.dir / f"{voice}.onnx")
+        self._loaded[voice] = loaded
+        return loaded
+
+    def _voice_for(self, spk_id: str, lang: str) -> str:
+        key = f"{lang}:{spk_id}"
+        if key not in self._voice_of:
+            voices = self._available(lang)
+            # stable order, so the same character keeps the same voice across runs
+            index = sum(map(ord, spk_id)) % len(voices)
+            self._voice_of[key] = voices[index]
+        return self._voice_of[key]
+
+    # -- engine interface ---------------------------------------------------
+    def prepare(self, speakers: dict, workdir: Path) -> None:
+        self.speakers = speakers
+
+    def say(self, text: str, spk: dict, lang: str, out: Path) -> Path:
+        import soundfile as sf
+        from piper import SynthesisConfig
+
+        voice_name = self._voice_for(spk.get("id", ""), lang)
+        voice = self._load(voice_name)
+        # 0.95 because a straight read always runs long against an edited dub script, and
+        # slowing a clip down is more audible than starting a touch brisk.
+        config = SynthesisConfig(length_scale=0.95, normalize_audio=True)
+        audio = np.concatenate(
+            [chunk.audio_float_array for chunk in voice.synthesize(text, syn_config=config)]
+        )
+        out = Path(out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        sf.write(str(out), audio, voice.config.sample_rate, subtype="PCM_16")
+        return out
+
+    def close(self) -> None:
+        self._loaded.clear()
 
 
 class ElevenEngine:
@@ -555,6 +674,10 @@ def make_engine(kind: str, lang: str, device: str, model: str | None = None, kee
                 "Use --tts chatterbox (MIT) or --tts elevenlabs for other languages."
             )
         return XttsEngine(device)
+    if kind == "piper":
+        if lang not in PIPER_LANGS:
+            PiperEngine()._available(lang)  # raises with the language list
+        return PiperEngine(device=device, model=model)
     if kind == "elevenlabs":
         return ElevenEngine(model=model or "eleven_multilingual_v2", keep_voices=keep_voices)
     raise SystemExit(f"unknown tts engine: {kind}")
