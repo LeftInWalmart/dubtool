@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="dub", description="Dub any TV episode into another language, in the original voices.")
     p.add_argument("--version", action="version", version=f"dub {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("gui", help="open the window: pick a video, pick a language, press a button")
 
     def common(sp):
         sp.add_argument("inputs", nargs="+", help="video file(s) or a directory of episodes")
@@ -114,7 +115,9 @@ def build_parser() -> argparse.ArgumentParser:
     lv.add_argument("--separate", default="none", choices=["demucs", "none"],
                     help="duck the original dialogue (fast, default) or pull it out with demucs")
     lv.add_argument("--jobs", type=int, default=1)
-    lv.add_argument("--no-browser", action="store_true", help="don't open a tab")
+    lv.add_argument("--no-browser", action="store_true", help="don't open a player")
+    lv.add_argument("--player", default="app", choices=["app", "browser", "none"],
+                    help="app = its own window (default), browser = a tab, none = print the url")
     lv.add_argument("--work", help="scratch folder (default: dubwork/live-<name>)")
     return p
 
@@ -279,6 +282,9 @@ Every command takes --help. First time? Run: dub.bat doctor""")
     args = build_parser().parse_args(argv)
     if args.cmd == "doctor":
         return doctor(args.device)
+    if args.cmd == "gui":
+        from dubkit import gui
+        return gui.main([])
     if args.cmd == "live":
         from dubkit import live
         live.serve(live.LiveConfig(
@@ -287,6 +293,7 @@ Every command takes --help. First time? Run: dub.bat doctor""")
             device=args.device, translate=args.translate,
             translate_model=args.translate_model, separate=args.separate,
             source_lang=args.source_lang, stream=not args.whole,
+            player="none" if args.no_browser else args.player,
             jobs=resolve_jobs(args.jobs), open_browser=not args.no_browser,
             work=Path(args.work) if args.work else None))
         return 0

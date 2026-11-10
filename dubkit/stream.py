@@ -299,6 +299,9 @@ class Streamer:
         pos, cover, n_win = 0.0, 0.0, 0
         try:
             while pos < self.total - 0.05:
+                if getattr(live, "stopped", False):
+                    print("      stopped")
+                    return
                 n_win += 1
                 end = min(self.total, pos + WIN)
                 t0 = time.time()

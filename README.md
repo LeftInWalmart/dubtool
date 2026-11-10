@@ -220,6 +220,27 @@ clip with Windows' own TTS voices and a music bed:
 & $py dub.py run _smoke\test_episode.mkv --lang es --whisper tiny
 ```
 
+## The app
+
+![the window](assets/gui.png)
+
+```powershell
+.\dub.bat gui            # or double-click dist\DubTool.exe
+```
+
+Pick a video (or paste a link), pick a language, press **Watch it dub**. A player window
+opens on its own — no tabs, no address bar — and starts as soon as the first blocks exist.
+**Save a dubbed file** runs the same thing without the player, and leaves an mp4 with two
+audio tracks next to the source.
+
+`dist\DubTool.exe` is a single file that needs nothing installed: python, ffmpeg and the
+transcription model are inside it (≈230 MB). It keeps its models in
+`%LOCALAPPDATA%\DubTool\cache`, so moving the exe does not re-download them. The cloning
+engine (chatterbox) is *not* bundled — it would triple the size — so the packaged app uses
+piper; an installed `.venv-tts` is picked up when present.
+
+Build it yourself with `powershell -ExecutionPolicy Bypass -File scriptsuild_exe.ps1`.
+
 ## Dubbing a script (animation, games)
 
 Most animation and game work does not arrive as a finished mix — it arrives as a

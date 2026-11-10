@@ -17,3 +17,7 @@ demo/_frame*.png
 demo/*.mp4
 !demo/excerpt.mp4
 demo/dubwork/
+dist/
+build/
+*.spec
+_selftest*.json

@@ -60,6 +60,7 @@ class LiveConfig:
     stream: bool = True     # rolling-window analysis; --whole restores the old shape
     jobs: int = 1
     open_browser: bool = True
+    player: str = "app"     # app = its own chromeless window, browser = a tab, none = just print
     work: Path | None = None
 
 
@@ -119,6 +120,13 @@ class Live:
         self.lock = threading.Lock()
 
     # -- state the page reads ------------------------------------------------
+    def shutdown(self) -> None:
+        """Close the page and stop the dubber. Safe from any thread (the window uses it)."""
+        self.stopped = True
+        httpd = getattr(self, "_httpd", None)
+        if httpd is not None:
+            threading.Thread(target=httpd.shutdown, daemon=True).start()
+
     def snapshot(self) -> dict:
         with self.lock:
             return {
@@ -430,7 +438,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         path = self.path.split("?")[0]
         if path == "/":
-            page = Path(__file__).with_name("player.html").read_text(encoding="utf-8")
+            try:
+                page = Path(__file__).with_name("player.html").read_text(encoding="utf-8")
+            except OSError as exc:
+                page = (f"<h1>player.html is missing</h1><pre>{exc}</pre>"
+                        "<p>Packaged builds must ship dubkit/player.html "
+                        "(--add-data in scripts/build_exe.ps1).</p>")
             body = page.encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -448,8 +461,42 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "no route"}, 404)
 
 
-def serve(cfg: LiveConfig) -> None:
-    live = Live(cfg)
+BROWSERS = [
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+]
+
+
+def open_player(url: str, mode: str = "app") -> None:
+    """Open the player as its own window.
+
+    A tab in the user's browser is the wrong shape: it hides behind other tabs, it inherits
+    their extensions, and it reads as "this is a website". `--app` gives a chromeless window
+    with no address bar and no tabs, which is what a player should look like. The engine is
+    still the system's Chromium (Edge/WebView2) because that is the only thing on Windows that
+    can schedule sample-accurate audio against video without shipping a media framework.
+    """
+    if mode == "none":
+        return
+    if mode == "browser":
+        webbrowser.open(url)
+        return
+    for exe in BROWSERS:
+        if Path(exe).exists():
+            try:
+                subprocess.Popen([exe, f"--app={url}", "--window-size=1180,760",
+                                  "--autoplay-policy=no-user-gesture-required"],
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                return
+            except OSError:
+                continue
+    webbrowser.open(url)
+
+
+def serve(cfg: LiveConfig, _live: "Live | None" = None) -> None:
+    live = _live if _live is not None else Live(cfg)
     Handler.live = live
 
     def work():
@@ -463,6 +510,7 @@ def serve(cfg: LiveConfig) -> None:
             print(f"\n!! {type(exc).__name__}: {exc}")
 
     server = ThreadingHTTPServer(("127.0.0.1", cfg.port), Handler)
+    live._httpd = server
     port = server.server_address[1]          # --port 0 lets the OS pick, for tests and scripts
     url = f"http://localhost:{port}/"
     server.daemon_threads = True
@@ -471,7 +519,7 @@ def serve(cfg: LiveConfig) -> None:
     print(f"  watching {cfg.inp}  ->  {cfg.lang}  ({cfg.tts})")
     print(f"  open {url}  (ctrl-c to stop)")
     if cfg.open_browser:
-        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.8, lambda: open_player(url, getattr(cfg, "player", "app"))).start()
     try:
         while True:
             time.sleep(0.5)
