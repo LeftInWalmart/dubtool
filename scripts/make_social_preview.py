@@ -1,4 +1,4 @@
-"""Render .github/social-preview.png (1200x630) for the GitHub repo card.
+"""Render social-preview.png (1200x630) for the GitHub repo card.
 
 GitHub has no API for the social preview — it is a drag-and-drop in
 Settings → General → Social preview — so this script exists to make the asset
@@ -81,7 +81,9 @@ def main() -> None:
     d.text((fx + 76, fy + fh - 32), "ES", font=small, fill=ACCENT)
     d.text((fx + 110, fy + fh - 32), "· dubbed in the actor's own voice", font=small, fill=MUTED)
 
-    out = ROOT / ".github/social-preview.png"
+    # Repo root, not .github/: Explorer hides dot-folders by default, and the upload
+    # dialog is a file picker.
+    out = ROOT / "social-preview.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     img.save(out, optimize=True)
     print(f"{out} {out.stat().st_size:,} bytes {img.size}")

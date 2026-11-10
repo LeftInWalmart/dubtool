@@ -23,14 +23,15 @@ To hear the result without hunting for footage:
 .\.venv\Scripts\python.exe dub.py run demo\excerpt.mp4 --lang es --whisper tiny
 ```
 
-The repository card image (`.github/social-preview.png`) is generated, not drawn by hand:
+The repository card image (`social-preview.png`) is generated, not drawn by hand:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\make_social_preview.py   # needs Pillow
 ```
 
 GitHub has no API for it, so after regenerating, drag the PNG into Settings → General →
-Social preview.
+Social preview. It lives in the repo root because Windows Explorer hides dot-folders and the
+upload dialog is a file picker.
 
 ## Rules of the road
 
