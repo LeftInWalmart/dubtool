@@ -140,6 +140,17 @@ class App:
         self.write("Pick a video, pick a language, then either watch it while it dubs or save a file.\n")
         self.root.after(80, self.drain)
 
+        # Double-clicking a shortcut should feel like the program arrived, not like it
+        # quietly opened somewhere behind the browser.
+        def front():
+            root.deiconify()
+            root.lift()
+            root.attributes("-topmost", True)
+            root.after(350, lambda: root.attributes("-topmost", False))
+            root.focus_force()
+
+        root.after(120, front)
+
     # ------------------------------------------------------------------ bits
     def _style(self):
         st = ttk.Style()
@@ -186,6 +197,17 @@ class App:
         except queue.Empty:
             pass
         self.root.after(80, self.drain)
+
+        # Double-clicking a shortcut should feel like the program arrived, not like it
+        # quietly opened somewhere behind the browser.
+        def front():
+            root.deiconify()
+            root.lift()
+            root.attributes("-topmost", True)
+            root.after(350, lambda: root.attributes("-topmost", False))
+            root.focus_force()
+
+        root.after(120, front)
 
     def choose(self):
         path = filedialog.askopenfilename(

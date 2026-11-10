@@ -21,3 +21,5 @@ dist/
 build/
 *.spec
 _selftest*.json
+testing/*.mp4
+testing/*.lnk

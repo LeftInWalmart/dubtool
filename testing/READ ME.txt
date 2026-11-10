@@ -1,0 +1,17 @@
+Double-click DubTool.lnk to open the program.
+
+Then, in the window:
+  1. VIDEO      -> "Choose file…" and pick one of the two clips in this folder
+                   (60 seconds is the quick one; 100 seconds has music and laughter)
+                   or paste a YouTube link straight into the box
+  2. LANGUAGE   -> pick one (Spanish is default)
+  3. VOICE      -> leave it on "piper - fast, plain voice". Chatterbox matches the
+                   actor's voice but cannot keep up with playback, so it will stall.
+  4. press "Watch it dub"  -> a player window opens on its own after ~10 seconds
+     or   "Save a dubbed file" -> writes <name>.<language>.mp4 next to the video,
+                  with the dub on track 1 and the original on track 2
+
+First run of a language downloads its voice model (~60 MB) once.
+
+If something goes wrong the log inside the window says what. The full log is also
+written to dubwork\ beside this folder.

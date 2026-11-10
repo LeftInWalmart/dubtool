@@ -225,8 +225,10 @@ clip with Windows' own TTS voices and a music bed:
 ![the window](assets/gui.png)
 
 ```powershell
-.\dub.bat gui            # or double-click dist\DubTool.exe
+.\play.bat               # or double-click dist\DubTool.exe, or testing\DubTool.lnk
 ```
+
+`testing\` holds a shortcut and two Mr. Ed clips (60 s and 100 s) if you just want to poke at it.
 
 Pick a video (or paste a link), pick a language, press **Watch it dub**. A player window
 opens on its own — no tabs, no address bar — and starts as soon as the first blocks exist.
