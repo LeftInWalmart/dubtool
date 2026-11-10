@@ -23,6 +23,15 @@ To hear the result without hunting for footage:
 .\.venv\Scripts\python.exe dub.py run demo\excerpt.mp4 --lang es --whisper tiny
 ```
 
+The repository card image (`.github/social-preview.png`) is generated, not drawn by hand:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\make_social_preview.py   # needs Pillow
+```
+
+GitHub has no API for it, so after regenerating, drag the PNG into Settings → General →
+Social preview.
+
 ## Rules of the road
 
 - **Never make a non-commercial model the default.** XTTS-v2's weights forbid commercial
