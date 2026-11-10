@@ -1,55 +1,0 @@
-  watching demo/excerpt.mp4  ->  es  (piper)
-  open http://localhost:8102/  (ctrl-c to stop)
-    extract: running ...
-    extract: done in 0.5s
-    asr_src: running ...
-    asr_src: done in 0.5s
-    asr: running ...
-      25 lines, detected en (100%)
-    asr: done in 15.8s
-    speakers: running ...
-D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
-  available_backends = torchaudio.list_audio_backends()
-D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
-  available_backends = torchaudio.list_audio_backends()
-      11 speaker(s) via ecapa: spk00, spk01, spk02, spk03, spk04, spk05, spk06, spk07, spk08, spk09, spk10
-    speakers: done in 4.3s
-      ! spk00 has only 2.42s of clean audio — voice clone may drift
-      ! spk03 has only 1.19s of clean audio — voice clone may drift
-      ! spk04 has only 1.0s of clean audio — voice clone may drift
-      ! spk05 has only 0.85s of clean audio — voice clone may drift
-      ! spk06 has only 1.35s of clean audio — voice clone may drift
-      ! spk07 has only 0.87s of clean audio — voice clone may drift
-      ! spk08 has only 1.07s of clean audio — voice clone may drift
-      ! spk09 has only 2.89s of clean audio — voice clone may drift
-      ! spk10 has only 1.77s of clean audio — voice clone may drift
-    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
-    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
-    line 0 untranslated (PermissionDeniedError)
-    line 1 untranslated (PermissionDeniedError)
-    line 2 untranslated (PermissionDeniedError)
-    line 3 untranslated (PermissionDeniedError)
-    line 4 untranslated (PermissionDeniedError)
-    line 5 untranslated (PermissionDeniedError)
-    line 6 untranslated (PermissionDeniedError)
-    line 7 untranslated (PermissionDeniedError)
-    line 8 untranslated (PermissionDeniedError)
-    line 9 untranslated (PermissionDeniedError)
-    line 10 untranslated (PermissionDeniedError)
-    line 11 untranslated (PermissionDeniedError)
-    line 12 untranslated (PermissionDeniedError)
-    line 13 untranslated (PermissionDeniedError)
-    line 14 untranslated (PermissionDeniedError)
-    line 15 untranslated (PermissionDeniedError)
-    line 16 untranslated (PermissionDeniedError)
-    line 17 untranslated (PermissionDeniedError)
-    line 18 untranslated (PermissionDeniedError)
-    line 19 untranslated (PermissionDeniedError)
-    line 20 untranslated (PermissionDeniedError)
-    line 21 untranslated (PermissionDeniedError)
-    line 22 untranslated (PermissionDeniedError)
-    line 23 untranslated (PermissionDeniedError)
-    line 24 untranslated (PermissionDeniedError)
-    translated 0/25 lines
-    openrouter failed (25/25 lines could not be translated), falling back to Google Translate
-    translated 1/25 lines    translated 2/25 lines    translated 3/25 lines    translated 4/25 lines    translated 5/25 lines    translated 6/25 lines    translated 7/25 lines    translated 8/25 lines    translated 9/25 lines    translated 10/25 lines    translated 11/25 lines    translated 12/25 lines    translated 13/25 lines    translated 14/25 lines    translated 15/25 lines    translated 16/25 lines    translated 17/25 lines    translated 18/25 lines    translated 19/25 lines    translated 20/25 lines    translated 21/25 lines    translated 22/25 lines    translated 23/25 lines    translated 24/25 lines    translated 25/25 lines

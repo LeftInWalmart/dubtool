@@ -454,8 +454,9 @@ def serve(cfg: LiveConfig) -> None:
             live.set(phase="error", error=f"{type(exc).__name__}: {exc}")
             print(f"\n!! {type(exc).__name__}: {exc}")
 
-    url = f"http://localhost:{cfg.port}/"
     server = ThreadingHTTPServer(("127.0.0.1", cfg.port), Handler)
+    port = server.server_address[1]          # --port 0 lets the OS pick, for tests and scripts
+    url = f"http://localhost:{port}/"
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()
     threading.Thread(target=work, daemon=True).start()
