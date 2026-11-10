@@ -1,0 +1,73 @@
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: offline tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # The heavy deps (torch, whisper, demucs) are imported lazily, so the offline
+      # suite runs against numpy + soundfile + a bundled ffmpeg. No 10 GB download.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy soundfile imageio-ffmpeg
+
+      - name: Tests
+        run: python tests/test_dub.py
+
+      - name: CLI loads
+        run: |
+          python dub.py --help
+          python dub.py batch --help
+          python dub.py run --help
+
+      - name: Compiles
+        run: python -m compileall -q dubkit dub.py scripts
+
+  # Everything that needs the models lives here, so the fast job above stays green
+  # on a laptop with 5 minutes to spare. Manual only — a full dub is ~20 minutes.
+  e2e:
+    name: end-to-end dub (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+          python -m pip install chatterbox-tts
+      - name: Dub 100 seconds into Spanish
+        run: python dub.py run demo/excerpt.mp4 --lang es --whisper tiny --translate google --tts chatterbox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: excerpt-es
+          path: demo/excerpt.es.mp4

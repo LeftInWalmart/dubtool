@@ -1,0 +1,43 @@
+name: Bug report
+description: Something crashed, drifted, or sounded wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. The three things that turn "it's broken" into a fix are below.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+      placeholder: |
+        dub.py run "S01E01.mkv" --lang es --tts chatterbox
+        Expected Spanish in the same voices; got English for the first two lines.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The full run, not just the last line. `report.json` from the work folder helps enormously.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source material
+      description: |
+        Duration, audio codec and bitrate, how many speakers, music or laughter under the dialogue,
+        and how far apart the languages are. "320x240 TV print, 63 kbps, laugh track" is the kind of
+        detail that explains most bad results.
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Machine
+      description: OS, CPU cores, GPU (or none), and the output of `dub.py doctor`.
+    validations:
+      required: true

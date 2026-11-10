@@ -1,8 +1,19 @@
 # DubTool
 
+[![tests](https://github.com/LeftInWalmart/dubtool/actions/workflows/tests.yml/badge.svg)](https://github.com/LeftInWalmart/dubtool/actions/workflows/tests.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-ff9d5c.svg)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.11-3776ab.svg)](https://www.python.org/downloads/release/python-3110/)
+
 Localize a video — or just a script — into another language **using each character's own
 voice**. Free, MIT licensed, runs on your machine: no uploads, no accounts, no per-minute
 fees.
+
+<img src="demo/media/demo-poster.jpg" width="320" alt="A frame from the public-domain demo episode">
+
+```powershell
+dub.py run   "S01E01.mkv"  --lang es            # a finished cut
+dub.py batch "lines.csv"   --voices cast/       # or a script, no video needed
+```
 
 Point it at `S01E01.mkv`, name a language, get `S01E01.es.mp4` with the English audio
 replaced by Spanish speech that still sounds like the original actors' voices — music,

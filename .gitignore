@@ -1,5 +1,4 @@
-.venv/
-.venv-tts/
+.venv*/
 .cache/
 dubwork/
 __pycache__/
@@ -18,5 +17,4 @@ demo/_frame*.png
 demo/*.mp4
 !demo/excerpt.mp4
 demo/dubwork/
-demo/cast/
 archive/

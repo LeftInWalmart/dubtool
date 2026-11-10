@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Licensing a model for commercial use
+    url: https://github.com/LeftInWalmart/dubtool/blob/master/THIRD-PARTY-LICENSES.md
+    about: Which engines allow selling the dubs, and which do not.
