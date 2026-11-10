@@ -329,6 +329,13 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # keep the console for progress, not access logs
         pass
 
+    def handle_one_request(self):
+        # a viewer closing the tab mid-block is normal, not a traceback on the user's console
+        try:
+            super().handle_one_request()
+        except (ConnectionResetError, BrokenPipeError):
+            self.close_connection = True
+
     # -- helpers ------------------------------------------------------------
     def _json(self, obj: dict, code: int = 200):
         body = json.dumps(obj).encode()
