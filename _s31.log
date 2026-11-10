@@ -1,0 +1,14 @@
+  watching demo/_m60.mp4  ->  es  (piper)
+  open http://localhost:8133/  (ctrl-c to stop)
+    extract: running ...
+    extract: done in 0.5s
+D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
+  available_backends = torchaudio.list_audio_backends()
+    openrouter key is out of credit - using Google for the rest of this run
+
+    openrouter key is out of credit - using Google for the rest of this run
+    translated 1/5 lines    translated 2/5 lines    translated 3/5 lines    translated 4/5 lines    translated 5/5 lines
+
+!! AttributeError: 'Streamer' object has no attribute 'pool'
+D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
+  available_backends = torchaudio.list_audio_backends()

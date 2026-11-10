@@ -37,7 +37,7 @@ import soundfile as sf
 from . import ff
 from .pipeline import SR_MIX, Config, Work, stage_asr, stage_bed, stage_extract, stage_speakers, stage_split
 
-BLK = 5.0          # seconds of audio per block: the player's unit of buffering
+BLK = 3.0          # seconds of audio per block: the player's unit of buffering
 FADE = 0.008       # 8 ms at each block edge, or the joins click
 SPEECH_RMS = 0.10  # -20 dBFS: piper and chatterbox disagree wildly about level
 BED_GAIN = 0.70    # music and effects sit under the dialogue, not next to it
@@ -48,7 +48,7 @@ class LiveConfig:
     inp: str
     lang: str
     port: int = 8080
-    buffer: float = 20.0
+    buffer: float = 10.0
     whisper: str = "small"
     tts: str = "piper"
     tts_model: str | None = None
@@ -56,6 +56,8 @@ class LiveConfig:
     translate: str = "auto"
     translate_model: str | None = None
     separate: str = "none"
+    source_lang: str | None = None
+    stream: bool = True     # rolling-window analysis; --whole restores the old shape
     jobs: int = 1
     open_browser: bool = True
     work: Path | None = None
@@ -342,6 +344,12 @@ class Live:
         self.out_dir = work
         picture = self.remux(src, work)
         self.picture = picture
+        self.src, self.work = src, work
+        if self.cfg.stream:
+            from .stream import Streamer
+
+            Streamer(self).run()
+            return
         speakers, segments, bed, total = self.prepare(src, work)
         self.set(phase="dubbing")
         self.render(speakers, segments, bed, total)

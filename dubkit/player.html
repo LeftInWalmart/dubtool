@@ -65,7 +65,7 @@
 </main>
 
 <script>
-const BLK = 5;                 // must match live.py
+let BLK = 5;                   // taken from state.json; 5 is only the fallback
 const LEAD = 0.12;             // headroom before the first scheduled block
 const AHEAD = 1.2;             // how far past the playhead must already be scheduled
 const $ = id => document.getElementById(id);
@@ -218,6 +218,7 @@ function paint(s) {
   lastState = s;
   $('title').textContent = s.title || 'DubTool live';
   $('lang').textContent = (s.lang || '').toUpperCase();
+  if (s.block_seconds > 0 && s.block_seconds !== BLK) BLK = s.block_seconds;   // server decides
   $('meta').textContent = `${s.engine} · block ${s.block_seconds}s`;
   $('phase').textContent = s.phase;
   $('ready').textContent = mmss(s.ready || 0);

@@ -88,14 +88,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     lv = sub.add_parser(
         "live",
-        help="dub while someone watches: buffers, translates ahead of the playhead, then plays",
+        help="dub while someone watches: streams in 8-second windows, starts in seconds",
+        description="Streams the analysis: it transcribes, translates and voices 8 seconds at a "
+                    "time, so the first block can play a few seconds in and the rest keeps "
+                    "being produced behind the playhead. --whole goes back to listening to the "
+                    "entire file first.",
     )
     lv.add_argument("source", help="video file, or a URL if yt-dlp is installed")
     lv.add_argument("--lang", required=True, help="target language, e.g. es fr de ja th")
     lv.add_argument("--port", type=int, default=8080)
-    lv.add_argument("--buffer", type=float, default=20.0,
-                    help="seconds of dub to produce before the viewer may start (default 20)")
+    lv.add_argument("--buffer", type=float, default=10.0,
+                    help="seconds of dub to produce before the viewer may start (default 10; "
+                         "5 is one block, the smallest useful head start)")
     lv.add_argument("--whisper", default="small", help="tiny base small medium large-v3")
+    lv.add_argument("--source-lang", default=None,
+                    help="pin the source language instead of detecting it on the first window")
+    lv.add_argument("--whole", action="store_true",
+                    help="transcribe the whole file before dubbing (slower start, cleaner transcript)")
     lv.add_argument("--tts", default="piper", choices=["piper", "chatterbox", "xtts", "elevenlabs"],
                     help="piper is the default: it is the only engine faster than playback")
     lv.add_argument("--tts-model", default=None)
@@ -277,6 +286,7 @@ Every command takes --help. First time? Run: dub.bat doctor""")
             whisper=args.whisper, tts=args.tts, tts_model=args.tts_model,
             device=args.device, translate=args.translate,
             translate_model=args.translate_model, separate=args.separate,
+            source_lang=args.source_lang, stream=not args.whole,
             jobs=resolve_jobs(args.jobs), open_browser=not args.no_browser,
             work=Path(args.work) if args.work else None))
         return 0

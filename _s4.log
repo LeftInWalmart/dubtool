@@ -1,0 +1,53 @@
+  watching demo/_m60.mp4  ->  es  (piper)
+  open http://localhost:8115/  (ctrl-c to stop)
+    extract: running ...
+    extract: done in 0.5s
+D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
+  available_backends = torchaudio.list_audio_backends()
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+D:\Development\Dub folder\.venv\Lib\site-packages\speechbrain\utils\torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
+  available_backends = torchaudio.list_audio_backends()
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    line 0 untranslated (PermissionDeniedError)
+    line 1 untranslated (PermissionDeniedError)
+    line 2 untranslated (PermissionDeniedError)
+    line 3 untranslated (PermissionDeniedError)
+    line 4 untranslated (PermissionDeniedError)
+    translated 0/5 lines
+    openrouter failed (5/5 lines could not be translated), falling back to Google Translate
+    translated 1/5 lines    translated 2/5 lines    translated 3/5 lines    translated 4/5 lines    translated 5/5 lines
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    line 5 untranslated (PermissionDeniedError)
+    line 6 untranslated (PermissionDeniedError)
+    line 7 untranslated (PermissionDeniedError)
+    translated 0/3 lines
+    openrouter failed (3/3 lines could not be translated), falling back to Google Translate
+    translated 1/3 lines    translated 2/3 lines    translated 3/3 lines
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    line 8 untranslated (PermissionDeniedError)
+    line 9 untranslated (PermissionDeniedError)
+    translated 0/2 lines
+    openrouter failed (2/2 lines could not be translated), falling back to Google Translate
+    translated 1/2 lines    translated 2/2 lines
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    line 10 untranslated (PermissionDeniedError)
+    line 11 untranslated (PermissionDeniedError)
+    line 12 untranslated (PermissionDeniedError)
+    translated 0/3 lines
+    openrouter failed (3/3 lines could not be translated), falling back to Google Translate
+    translated 1/3 lines    translated 2/3 lines    translated 3/3 lines
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    line 13 untranslated (PermissionDeniedError)
+    line 14 untranslated (PermissionDeniedError)
+    line 15 untranslated (PermissionDeniedError)
+    line 16 untranslated (PermissionDeniedError)
+    line 17 untranslated (PermissionDeniedError)
+    translated 0/5 lines
+    openrouter failed (5/5 lines could not be translated), falling back to Google Translate
+    translated 1/5 lines    translated 2/5 lines    translated 3/5 lines    translated 4/5 lines    translated 5/5 lines
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)
+    batch 1 retry (PermissionDeniedError: Error code: 403 - Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/4f7359)

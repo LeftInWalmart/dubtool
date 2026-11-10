@@ -55,16 +55,21 @@ episode.mkv
 ## Watch it while it dubs
 
 ```powershell
-dub.bat live "S01E01.mkv" --lang es            # or a URL, if yt-dlp is installed
-dub.bat live "S01E01.mkv" --lang es --buffer 40   # wait for more before starting
+dub.bat live "S01E01.mkv" --lang es               # or a URL, if yt-dlp is installed
+dub.bat live "S01E01.mkv" --lang es --whisper tiny   # start sooner, rougher transcript
+dub.bat live "S01E01.mkv" --lang es --whole          # old behaviour: read the file first
 ```
 
-It opens a browser at `http://localhost:8080`. The page shows the film, one viewer, and:
+It opens a browser at `http://localhost:8080`. Nothing is analysed in advance: the file is
+chewed 12 seconds at a time, and the dub is written as it goes. The page shows the film, one
+viewer, and:
 
-1. **buffers** — the audio track, the transcript, who says what, and the translation are
-   prepared first; the page reports each phase while it waits, so nothing looks frozen
-2. **dubs ahead** — lines are voiced in time order and mixed onto the music/effects bed in
-   5-second blocks, always trying to stay ~20 s in front of the playhead
+1. **buffers** — the first three-second blocks: transcribe this window, identify who is
+   speaking by comparing voice fingerprints, translate, voice, mix onto the bed. The page
+   reports each phase while it waits, so nothing looks frozen
+2. **dubs ahead** — the next window is transcribed while you are watching the one before it;
+   lines are voiced in time order into 3-second blocks, always trying to stay a buffer
+   length in front of the playhead
 3. **plays** — the picture runs muted and the dubbed audio is scheduled on the WebAudio clock
    against it; the video's `currentTime` is slaved to the audio, so they cannot drift apart
 4. **stalls honestly** — if the engine falls behind (slow machine, `--tts chatterbox`, a GPU
@@ -76,15 +81,22 @@ so the viewer would sit through a stall every few seconds; the page will tell th
 
 ### How long before the first frame
 
-Everything before the dub is a listening pass over the file: extract, transcribe, identify
-speakers, translate. Only the voicing has to outrun the viewer, and piper does that at ~3.7x
-real time. Measured on a 100 s clip, 6-core Ryzen, no GPU:
+The wait is now the cost of the first two windows, not of the file. Measured on a 60 s clip,
+6-core Ryzen 5 5600G, no GPU, cold model cache:
 
 | command | first frame plays | whole clip dubbed |
 |---|---|---|
-| `live file.mkv --lang es` (default: ducked dialogue) | **41 s** | 60 s |
-| `live file.mkv --lang es --whisper tiny` | **27 s** | 52 s |
-| `live file.mkv --lang es --separate demucs` | **83 s** | 102 s |
+| `live file.mkv --lang es` (streaming) | **10–13 s** | 44 s (1.5x real time) |
+| `live file.mkv --lang es --whisper tiny` | **10 s** | 40 s |
+| `live file.mkv --lang es --whole` (older path) | 38 s | 48 s |
+
+Where the ten seconds go: 1 s to extract the audio, 1 s to transcribe the first window, 1 s
+to load the voice models (3 s on a cold cache), 1 s to load the speaker encoder, then ~1 s of
+voicing per line until the first block is complete — three seconds of audio cannot be finished
+until every line that starts inside it has been voiced.
+
+That is the floor on a CPU: the model loads and one transcription pass. A 40-minute episode now
+starts just as quickly as a 60-second clip, because nothing waits for the whole file.
 
 Two knobs decide that wait, and both are trades:
 
@@ -95,9 +107,11 @@ properly and costs about a minute per hundred seconds of video.
 - **`--whisper`** — `tiny` transcribes about four times faster and is rougher on noisy
 prints; `small` is the sensible default on clean audio.
 
-The wait scales with the file: a 40-minute episode spends several minutes in transcription
-before it can play, which is what `--whisper tiny` and `--separate none` exist to cut down. To
-skip the wait entirely, run `dub.bat analyze` on the file first; every stage caches in
+Streaming mode assumes playback starts a couple of seconds in, not instantly: the first block
+still needs its lines voiced. `--buffer` is how much dub must exist before the player is
+allowed to start; the default is 10 s (about three blocks).
+
+To skip even that, run `dub.bat analyze` on the file first; every stage caches in
 `dubwork/`, so live mode then starts in seconds.
 
 ## Engines and licences

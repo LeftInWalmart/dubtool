@@ -268,7 +268,7 @@ def test_live_blocks_and_routes():
     state.set(phase="dubbing", total=100.0, ready=20.0, blocks=4, lines_done=3, lines_total=25)
     snap = state.snapshot()
     assert snap["lang"] == "es" and snap["blocks"] == 4
-    assert snap["block_seconds"] == live.BLK == 5.0
+    assert snap["block_seconds"] == live.BLK == 3.0
     assert snap["buffer"] == 15.0 and snap["engine"] == "piper"
 
     live.Handler.live = state
@@ -294,6 +294,76 @@ def test_live_blocks_and_routes():
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_stream_contain():
+    """A line cut by the window edge must be dropped and re-read, not voiced half-written."""
+    from dubkit import stream
+
+    segs = [{"start": 0.0, "end": 1.0}, {"start": 2.0, "end": 5.5},
+            {"start": 6.0, "end": 8.0}]
+    keep, rewind = stream.contain(segs, cover=0.0, end=5.0)
+    assert [s["start"] for s in keep] == [0.0]
+    assert rewind == 2.0                      # go back to where the cut line began
+
+    keep, rewind = stream.contain(segs, cover=6.0, end=12.0)
+    assert [s["start"] for s in keep] == [6.0] and rewind is None
+
+    keep, _ = stream.contain([{"start": 1.0, "end": 2.0}], cover=3.0, end=12.0)
+    assert keep == []                         # already handled by an earlier window
+
+
+def test_stream_duck():
+    from dubkit import stream
+
+    sr = 8000
+    gain = np.ones(sr * 3, np.float32)
+    stream._duck(gain, 0.0, [(1.0, 2.0)], sr)
+    assert gain[int(1.5 * sr)] < 0.10          # the original dialogue is buried
+    assert gain[10] > 0.99 and gain[-10] > 0.99  # everything else is untouched
+
+
+def test_stream_blocks():
+    """Place a clip, flush a block, and check the audio landed where it was asked to."""
+    import tempfile
+    from types import SimpleNamespace
+    from dubkit import stream, ff
+
+    work = Path(tempfile.mkdtemp())
+    cfg = SimpleNamespace(lang="es", translate="google", tts="piper", tts_model=None,
+                          device="cpu", whisper="tiny", source_lang=None, jobs=1,
+                          translate_model=None, separate="none", inp="x.mp4")
+    st = stream.Streamer(_FakeLive(work, cfg))
+    try:
+        st.total, st.n_blocks = 9.0, 3
+        (work / "audio").mkdir()
+        ff.write_wav(work / "master.wav",
+                     np.zeros((int(live.SR_MIX * 9), 2), np.float32), live.SR_MIX)
+        tone = np.full((int(live.SR_MIX * 0.5), 2), 0.4, np.float32)
+        st._place(tone, 1.0)
+        st._flush(1)
+        assert (work / "audio" / "0.wav").exists()
+        assert not (work / "audio" / "1.wav").exists()
+        data, sr = ff.sf.read(str(work / "audio" / "0.wav"), dtype="float32")
+        assert abs(sr - live.SR_MIX) < 1
+        loud = np.abs(data[int(1.1 * sr):int(1.4 * sr)]).max()
+        quiet = np.abs(data[int(2.0 * sr):int(2.9 * sr)]).max()
+        assert loud > 0.2 and quiet < 0.02    # the clip is in the block, the rest is silence
+        st._flush(3)                          # the tail blocks are written even if empty
+        assert st.written == 3
+    finally:
+        st.pool.shutdown(wait=False)
+
+
+class _FakeLive:
+    """Just enough of Live for the block writer: somewhere to put files and somewhere to
+    report progress."""
+
+    def __init__(self, work, cfg):
+        self.work, self.cfg, self.state = work, cfg, {}
+
+    def set(self, **kw):
+        self.state.update(kw)
 
 
 def main():
