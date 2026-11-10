@@ -16,6 +16,7 @@ demo/_frame*.png
 # media: big, and the demo clip is a public-domain download, not source
 *.srt
 demo/*.mp4
+!demo/excerpt.mp4
 demo/dubwork/
 demo/cast/
 archive/

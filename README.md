@@ -9,9 +9,10 @@ replaced by Spanish speech that still sounds like the original actors' voices �
 gunfire and laugh track untouched. Animation and game studios can skip the video entirely
 and hand it a CSV of lines plus a recording per character.
 
-A real run is checked in: `demo/excerpt.mp4` is 100 s of a public-domain *Mr. Ed* episode,
-`demo/excerpt.es.mp4` is the tool's Spanish dub of it (two audio tracks — Spanish and the
-original), and `demo/media/` holds the clips used in discussions of it.
+A real run is checked in: `demo/excerpt.mp4` is 100 s of a public-domain *Mr. Ed* episode
+(1961, 320×240, 63 kbps — a deliberately hostile source), `demo/media/demo-es.mp4` is the
+tool's Spanish dub of it, and `demo/media/line*.mp3` are the A/B pairs of two consecutive
+lines. `demo/excerpt.es.xtts.mp4`, if present locally, is the older XTTS render.
 
 ```
 episode.mkv
