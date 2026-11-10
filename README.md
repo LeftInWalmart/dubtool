@@ -74,6 +74,32 @@ It opens a browser at `http://localhost:8080`. The page shows the film, one view
 Live mode wants `--tts piper`. With a cloning engine the dub is 8–15× slower than playback,
 so the viewer would sit through a stall every few seconds; the page will tell them why.
 
+### How long before the first frame
+
+Everything before the dub is a listening pass over the file: extract, transcribe, identify
+speakers, translate. Only the voicing has to outrun the viewer, and piper does that at ~3.7x
+real time. Measured on a 100 s clip, 6-core Ryzen, no GPU:
+
+| command | first frame plays | whole clip dubbed |
+|---|---|---|
+| `live file.mkv --lang es` (default: ducked dialogue) | **41 s** | 60 s |
+| `live file.mkv --lang es --whisper tiny` | **27 s** | 52 s |
+| `live file.mkv --lang es --separate demucs` | **83 s** | 102 s |
+
+Two knobs decide that wait, and both are trades:
+
+- **`--separate`** — `none` (the default) pushes the original dialogue down ~24 dB under the
+dub instead of pulling it out of the mix. Music, laughter and effects are untouched, a little
+of the original voice bleeds through, and you start in half the time. `demucs` separates
+properly and costs about a minute per hundred seconds of video.
+- **`--whisper`** — `tiny` transcribes about four times faster and is rougher on noisy
+prints; `small` is the sensible default on clean audio.
+
+The wait scales with the file: a 40-minute episode spends several minutes in transcription
+before it can play, which is what `--whisper tiny` and `--separate none` exist to cut down. To
+skip the wait entirely, run `dub.bat analyze` on the file first; every stage caches in
+`dubwork/`, so live mode then starts in seconds.
+
 ## Engines and licences
 
 This matters if you plan to sell what comes out.

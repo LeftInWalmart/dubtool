@@ -16,6 +16,7 @@ Phases, all reported to the page so it can say what it is doing:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import mimetypes
@@ -27,6 +28,7 @@ import time
 import webbrowser
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -53,7 +55,7 @@ class LiveConfig:
     device: str = "cpu"
     translate: str = "auto"
     translate_model: str | None = None
-    separate: str = "demucs"
+    separate: str = "none"
     jobs: int = 1
     open_browser: bool = True
     work: Path | None = None
@@ -166,14 +168,27 @@ class Live:
         total = ff.duration(src)
         self.set(total=total)
         master = stage_extract(work, cfg)
-        vocals, novocals = stage_split(work, cfg, total)
 
-        self.set(phase="transcribing")
-        asr = stage_asr(work, cfg, vocals)
+        # Transcription and separation are independent (both read the same master), and
+        # transcription is the smaller of the two, so overlapping them costs nothing and saves
+        # the whole ASR time off the wait before the first block. ASR hears the mix instead of
+        # the isolated voice, which whisper copes with on dialogue.
+        self.set(phase="separating + transcribing")
+        if self.cfg.separate != "none":
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                f_split = pool.submit(stage_split, work, cfg, total)
+                f_asr = pool.submit(stage_asr, work, cfg, master)
+                vocals, novocals = f_split.result()
+                asr = f_asr.result()
+            speech_src = vocals
+        else:
+            vocals = novocals = None
+            asr = stage_asr(work, cfg, master)
+            speech_src = master
         segments = asr["segments"]
 
         self.set(phase="identifying voices")
-        speakers = stage_speakers(work, cfg, vocals, segments)["speakers"]
+        speakers = stage_speakers(work, cfg, speech_src, segments)["speakers"]
 
         tr = work.p(f"translate.{self.cfg.lang}.json")
         if tr.exists():
@@ -184,13 +199,23 @@ class Live:
 
             lines, provider = voice_mod.translate_segments(
                 segments, asr["lang"], self.cfg.lang, self.cfg.translate,
-                self.cfg.translate_model, src.stem, None,
+                self.cfg.translate_model, src.stem, None, jobs=6,
             )
             for seg in segments:
                 seg["text_tr"] = lines.get(seg["id"], seg["text"])
             tr.write_text(json.dumps({"lang": self.cfg.lang, "provider": provider,
                                       "segments": segments}, ensure_ascii=False), encoding="utf-8")
-        bed = stage_bed(work, vocals, novocals, segments)
+        if self.cfg.separate != "none":
+            bed = stage_bed(work, vocals, novocals, segments)
+        else:
+            self.set(phase="ducking the dialogue")
+            bed = work.p("bed_duck.wav")
+            spans = [(s["start"], s["end"]) for s in segments]
+            stamp = hashlib.sha1(json.dumps([spans, str(master)]).encode()).hexdigest()[:12]
+            side = work.p("bed_duck.sig")
+            if not bed.exists() or not side.exists() or side.read_text() != stamp:
+                ff.duck_bed(master, bed, spans)
+                side.write_text(stamp)
         self.set(lines_total=len(segments))
         return speakers, segments, bed, total
 

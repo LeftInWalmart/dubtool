@@ -102,7 +102,8 @@ def build_parser() -> argparse.ArgumentParser:
     lv.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     lv.add_argument("--translate", default="auto", choices=["auto", "openrouter", "google", "none"])
     lv.add_argument("--translate-model", default="google/gemini-2.5-flash")
-    lv.add_argument("--separate", default="demucs", choices=["demucs", "none"])
+    lv.add_argument("--separate", default="none", choices=["demucs", "none"],
+                    help="duck the original dialogue (fast, default) or pull it out with demucs")
     lv.add_argument("--jobs", type=int, default=1)
     lv.add_argument("--no-browser", action="store_true", help="don't open a tab")
     lv.add_argument("--work", help="scratch folder (default: dubwork/live-<name>)")

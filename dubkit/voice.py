@@ -199,27 +199,46 @@ class GoogleTranslator:
 
     URL = "https://translate.googleapis.com/translate_a/single"
 
-    def translate(self, segs, src, tgt, title, cast=None):
+    def translate(self, segs, src, tgt, title, cast=None, jobs: int = 1):
         tl = (tgt or "en").split("-")[0]
-        out = {}
-        for s in segs:
+        out: dict = {}
+        lock = threading.Lock()
+        done = 0
+
+        def one(s):
+            nonlocal done
             query = urllib.parse.urlencode(
                 {"client": "gtx", "sl": src or "auto", "tl": tl, "dt": "t", "q": s["text"]}
             )
+            text = None
             try:
                 with urllib.request.urlopen(f"{self.URL}?{query}", timeout=30) as r:
                     parts = json.loads(r.read().decode("utf-8"))[0]
-                out[s["id"]] = "".join(p[0] for p in parts if p and p[0]).strip()
+                text = "".join(p[0] for p in parts if p and p[0]).strip()
             except Exception as e:
                 print(f"    line {s['id']} untranslated ({type(e).__name__})")
-            print(f"    translated {len(out)}/{len(segs)} lines", end="\r")
-            time.sleep(0.15)
+            with lock:
+                done += 1
+                print(f"    translated {done}/{len(segs)} lines", end="\r")
+            if text:
+                out[s["id"]] = text
+
+        # the only stage between the transcript and the first dubbed block, so it is the one
+        # worth threading; the free endpoint is happy with a handful of parallel requests
+        jobs = max(1, min(int(jobs or 1), 8, len(segs) or 1))
+        if jobs == 1:
+            for s in segs:
+                one(s)
+                time.sleep(0.15)
+        else:
+            with ThreadPoolExecutor(max_workers=jobs) as pool:
+                list(pool.map(one, segs))
         print()
         return out
 
 
 def translate_segments(segments, src_lang, tgt_lang, provider: str, model: str,
-                       title: str, cast: dict | None = None):
+                       title: str, cast: dict | None = None, jobs: int = 1):
     provider = (provider or "auto").lower()
     if provider == "none":
         return {s["id"]: s["text"] for s in segments}, "none"
@@ -234,7 +253,7 @@ def translate_segments(segments, src_lang, tgt_lang, provider: str, model: str,
                 raise SystemExit(f"openrouter translation failed: {e}")
             print(f"    openrouter failed ({str(e)[:120]}), falling back to Google Translate")
     t = GoogleTranslator()
-    return t.translate(segments, src_lang, tgt_lang, title, cast), "google"
+    return t.translate(segments, src_lang, tgt_lang, title, cast, jobs=jobs), "google"
 
 
 # ---------------------------------------------------------------------- voices

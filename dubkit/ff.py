@@ -178,6 +178,39 @@ def duck_mix(background, vocals, out, spans, ramp: float = 0.12, block: int = 44
     return out
 
 
+def duck_bed(src, out, spans, floor: float = 0.06, ramp: float = 0.12,
+             block: int = 44100) -> Path:
+    """The mix itself, with the dialogue pushed down instead of separated out.
+
+    Live mode uses this when the viewer would rather start in twenty seconds than wait a
+    minute for demucs: music, laughter and effects are untouched, the original voice is
+    dropped ~24 dB under the dub. Some bleed gets through - that is the trade.
+    """
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    spans = sorted((max(0.0, float(a)), max(0.0, float(b))) for a, b in spans if b > 0)
+    with sf.SoundFile(str(src)) as f, sf.SoundFile(
+        str(out), "w", samplerate=f.samplerate, channels=f.channels, subtype="PCM_16"
+    ) as o:
+        sr = f.samplerate
+        pos = 0
+        while True:
+            buf = f.read(block, dtype="float32", always_2d=True)
+            if not len(buf):
+                break
+            t0, t1 = pos / sr, (pos + len(buf)) / sr
+            gain = np.ones(len(buf), dtype="float32")
+            for start, end in spans:
+                if end + ramp < t0 or start - ramp > t1:
+                    continue
+                t = (pos + np.arange(len(buf))) / sr
+                dip = np.minimum((t - (start - ramp)) / ramp, (end + ramp - t) / ramp)
+                gain = np.minimum(gain, 1.0 - (1.0 - floor) * np.clip(dip, 0.0, 1.0))
+            o.write(buf * gain[:, None])
+            pos += len(buf)
+    return out
+
+
 def mix(background, dub, out, loudnorm: bool = True) -> Path:
     """Background bed + dubbed speech, single pass."""
     out = Path(out)
