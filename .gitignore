@@ -1,0 +1,21 @@
+.venv/
+.venv-tts/
+.cache/
+dubwork/
+__pycache__/
+*.pyc
+_smoke/
+_shots/
+out/
+demo/_bench/
+demo/_bench_threads/
+demo/lines.example.*/
+demo/_frame*.png
+.pi/
+
+# media: big, and the demo clip is a public-domain download, not source
+*.srt
+demo/*.mp4
+demo/dubwork/
+demo/cast/
+archive/

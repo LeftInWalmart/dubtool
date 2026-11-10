@@ -1,0 +1,16 @@
+# CPU-only stack, verified on Windows 11 + Python 3.11.
+# torch is pinned below 2.9: from 2.9 on, torchaudio demands torchcodec + a
+# system FFmpeg install for audio IO, which is a mess on Windows.
+numpy>=1.26
+soundfile>=0.12.1
+imageio-ffmpeg>=0.5
+torch>=2.4,<2.9
+torchaudio>=2.4,<2.9
+faster-whisper>=1.1.0
+coqui-tts>=0.25.1
+six>=1.16
+demucs>=4.0.1
+scikit-learn>=1.4
+speechbrain>=1.0.0
+httpx>=0.27
+openai>=1.40
