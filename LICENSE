@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Bundled and downloaded model weights carry their own licences:
-
-  chatterbox (Resemble AI)  MIT                    commercial use allowed
-  xtts-v2   (Coqui)         Coqui Public Model License   NON-COMMERCIAL ONLY
-  faster-whisper            MIT
-  demucs                    MIT
-  pyannote / speechbrain    MIT / Apache-2.0
-
-XTTS-v2 is opt-in (`--tts xtts`); anything you produce with it is restricted to
-non-commercial use. Dubbing someone else's show also needs their permission —
-this licence covers the software, not the shows.

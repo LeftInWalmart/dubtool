@@ -40,46 +40,52 @@ This matters if you plan to sell what comes out.
 Coqui XTTS-v2 is the better-known voice clone and it is faster, but its licence says
 *"only non-commercial use of a machine learning model and its outputs"*, and Coqui no longer
 exists to sell you another one. Fine-tuning on its outputs does not change that. So the
-default is Chatterbox (Resemble AI, MIT), which stays free to use commercially.
+default is Chatterbox (Resemble AI, MIT), which stays free to use commercially. The full table of
+model licences is in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
 
 
 ## Setup (once)
 
+Windows (PowerShell), from the folder you cloned into:
+
 ```powershell
-cd "D:\Development\Dub folder"
 powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-That creates `.venv` with Python 3.11 (torch has no 3.14 wheels — your system
-Python is too new) and installs everything. `-Cuda` for an NVIDIA GPU,
-`-Extras` for pyannote diarization.
+That creates `.venv` with Python 3.11 (torch publishes no wheels for 3.13+ yet, so a
+brand-new system Python will fail here) and installs everything. Add `-Cuda` for an
+NVIDIA GPU, `-Extras` for pyannote diarization.
 
-Then add the voice engine (it needs its own environment — its torch pin fights ours):
+Then the voice engine, which needs its own environment because its torch pin fights ours:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup_chatterbox.ps1
 ```
 
-`ffmpeg` is found on PATH or taken from the bundled `imageio-ffmpeg` binary, so
-you don't have to install it.
+`ffmpeg` comes from the bundled `imageio-ffmpeg` wheel unless one is already on PATH.
+macOS/Linux: `uv venv -p 3.11 .venv && .venv/bin/pip install -r requirements.txt` does the
+same job; nothing in the pipeline is Windows-specific.
 
-Then check:
+Check the machine before spending an evening on a render:
 
 ```powershell
 .\.venv\Scripts\python.exe dub.py doctor
 ```
 
-Keys (all optional except the one you need):
+Keys, all optional:
 
 | env var | used for | without it |
 |---|---|---|
-| `OPENROUTER_API_KEY` | translation (good, context-aware) | falls back to Google Translate (meh) |
+| `OPENROUTER_API_KEY` | context-aware translation of the whole script | falls back to Google Translate, line by line |
+| `HF_TOKEN` | pyannote diarization (best speaker splits) | ECAPA embeddings (fine) |
+| `ELEVENLABS_API_KEY` | languages no local engine speaks | local engines only |
 
-The Google fallback translates one line at a time with no context, so short lines get
-mangled (`Fine.` -> `Bußgeld.`). An OpenRouter key with a little credit is the real fix;
-a capped key returns `403 Key limit exceeded` and the tool drops to Google automatically.
-| `HF_TOKEN` | pyannote diarization (best) | uses ECAPA embeddings (fine) |
-| `ELEVENLABS_API_KEY` | languages no local engine has | local engines only |
+The Google fallback translates each line alone with no context, so short lines get mangled
+(`Fine.` → `Bußgeld.`). An OpenRouter key with a little credit is the real fix; a capped key
+returns `403 Key limit exceeded` and the tool drops to Google automatically.
+
+The models download once, on first use (~10 GB total, ~4 GB for the voice engine alone), into
+`.cache\` next to the code. Point `DUB_CACHE` elsewhere if that drive is small.
 
 ## Use
 
