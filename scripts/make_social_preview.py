@@ -54,14 +54,14 @@ def main() -> None:
     y = 186
     for path, line, colour in (
         (SERIF, "Your characters.", CREAM),
-        (SERIF, "Any language.", CREAM),
+        (SERIF, "Any of 23 languages.", CREAM),
         (SERIF_I, "Their actual voices.", ACCENT),
     ):
         font, _ = fit(d, path, line, 66, COL_W)
         d.text((X, y), line, font=font, fill=colour)
         y += int(font.size * 1.30)
 
-    d.text((X, 452), "23 languages · one command", font=ImageFont.truetype(REGULAR, 24), fill=MUTED)
+    d.text((X, 452), "video or a script · one command", font=ImageFont.truetype(REGULAR, 24), fill=MUTED)
     d.text((X, 486), "nothing leaves your machine", font=ImageFont.truetype(REGULAR, 24), fill=MUTED)
 
     d.line((X, 546, X + 52, 546), fill=ACCENT, width=3)
