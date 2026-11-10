@@ -254,6 +254,18 @@ def main(argv=None) -> int:
         except Exception:
             pass
     configure_cache()
+    if not (argv if argv is not None else sys.argv[1:]):
+        print("""
+dub - localize a video or a script, in each character's own voice
+
+  dub.bat doctor                              check this machine
+  dub.bat run   "S01E01.mkv" --lang es        dub a finished cut -> S01E01.es.mp4
+  dub.bat batch "lines.csv" --voices cast/    dub a script, no video needed
+  dub.bat live  "S01E01.mkv" --lang es        watch it while it dubs (opens a browser)
+
+Add --lang with any of: """ + ", ".join(sorted(voice.ALL_LANGS)) + """
+Every command takes --help. First time? Run: dub.bat doctor""")
+        return 0
     args = build_parser().parse_args(argv)
     if args.cmd == "doctor":
         return doctor(args.device)
